@@ -12,10 +12,10 @@
     , ...
     }:
     parts.lib.mkFlake { inherit inputs; } {
-      systems = [ "x86_64-linux" ];
+      systems = [ "x86_64-linux" "aarch64-linux" ];
       imports = [
         nci.flakeModule
-        parts.flakeModules.easyOverlay
+        ./nix/overlay.nix
       ];
       perSystem = { pkgs, config, ... }:
         let
@@ -42,10 +42,6 @@
           });
           # export the release package of the crate as default package
           packages.default = crateOutputs.packages.release;
-          # export the release crate as an overlay
-          overlayAttrs = {
-            "${crateName}" = crateOutputs.packages.release;
-          };
         };
     };
 }
