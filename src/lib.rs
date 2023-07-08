@@ -53,7 +53,10 @@ struct HyprClient {
     #[serde(rename = "initialTitle")]
     initial_title: String,
     title: String,
+    #[serde(rename = "initialClass")]
+    initial_class: String,
     class: String,
+    mapped: bool,
 }
 
 #[derive(Debug)]
@@ -89,7 +92,13 @@ fn init(config_dir: RString) -> State {
             clients
                 .into_iter()
                 .enumerate()
-                .map(|(id, client)| (id as u64, client))
+                .filter_map(|(id, client)| {
+                    if client.mapped {
+                        Some((id as u64, client))
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>()
         });
 
@@ -192,6 +201,9 @@ fn build_match(
 ) -> Match {
     let icon: ROption<RString> = desktop_entries
         .get(&client.class.to_lowercase())
+        .or_else(|| desktop_entries.get(&client.title.to_lowercase()))
+        .or_else(|| desktop_entries.get(&client.initial_class.to_lowercase()))
+        .or_else(|| desktop_entries.get(&client.initial_title.to_lowercase()))
         .map(|e| e.icon.clone().into())
         .into();
 
