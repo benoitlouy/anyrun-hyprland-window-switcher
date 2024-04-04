@@ -246,8 +246,10 @@ fn handler(selection: Match, state: &State) -> HandleResult {
         })
         .unwrap();
 
+    println!("Forking");
     match unsafe { unistd::fork() } {
         Ok(unistd::ForkResult::Child) => {
+            std::thread::sleep(std::time::Duration::from_millis(150));
             execute_command(
                 &state.config.hyprctl_path,
                 &[
