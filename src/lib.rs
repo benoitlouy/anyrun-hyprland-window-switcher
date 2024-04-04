@@ -1,6 +1,7 @@
 use abi_stable::std_types::{ROption, RString, RVec};
 use anyrun_plugin::*;
 use fuzzy_matcher::FuzzyMatcher;
+use nix::unistd;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
@@ -233,26 +234,36 @@ fn description(client: &HyprClient) -> ROption<RString> {
 
 #[handler]
 fn handler(selection: Match, state: &State) -> HandleResult {
-    let client_address = state
+    let client = state
         .clients
         .iter()
         .find_map(|(id, client)| {
             if *id == selection.id.unwrap() {
-                Some(client.address.clone())
+                Some(client)
             } else {
                 None
             }
         })
         .unwrap();
 
-    execute_command(
-        &state.config.hyprctl_path,
-        &[
-            "dispatch",
-            "focuswindow",
-            format!("address:{}", client_address).as_str(),
-        ],
-    )
-    .unwrap();
-    HandleResult::Close
+    match unsafe { unistd::fork() } {
+        Ok(unistd::ForkResult::Child) => {
+            execute_command(
+                &state.config.hyprctl_path,
+                &[
+                    "dispatch",
+                    "focuswindow",
+                    format!("address:{}", client.address).as_str(),
+                ],
+            ).unwrap();
+            unsafe { libc::exit(0) };
+        }
+        Ok(..) => {
+            HandleResult::Close
+        }
+        Err(why) => {
+            eprintln!("Failed to fork {}", why);
+            HandleResult::Close
+        }
+    }
 }
